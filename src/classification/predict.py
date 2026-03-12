@@ -58,5 +58,8 @@ def predict_chars(
     X_scaled = transform(X, scaler)
     y_pred = model.predict(X_scaled)
     labels = label_manager.decode(y_pred)
-    log.debug("predict_chars: %d chars → '%s'", len(labels), "".join(labels[:30]))
-    return labels
+    # Lowercase labels are stored with a trailing '_' (Windows-safe folder name).
+    # Strip it to recover the actual character: 'a_' → 'a', 'z_' → 'z'.
+    chars = [lbl.rstrip("_") for lbl in labels]
+    log.debug("predict_chars: %d chars → '%s'", len(chars), "".join(chars[:30]))
+    return chars

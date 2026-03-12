@@ -4,7 +4,8 @@
 
 preprocessing:
   # Binarization method: otsu | sauvola | adaptive
-  binarize_method: otsu
+  # sauvola handles uneven illumination better than otsu for real scans
+  binarize_method: sauvola
 
   # Sauvola-specific parameters (used only when method = sauvola)
   sauvola_window_size: 25
@@ -15,7 +16,8 @@ preprocessing:
   adaptive_C: 2
 
   # Denoising method: median | gaussian | bilateral | nlmeans
-  denoise_method: median
+  # bilateral preserves character edges better than median for scanned docs
+  denoise_method: bilateral
   denoise_ksize: 3
 
   # Deskewing

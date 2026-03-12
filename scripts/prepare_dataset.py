@@ -51,12 +51,26 @@ log = get_logger("prepare_dataset")
 
 # ── Chars74K class mapping ────────────────────────────────────────────────────
 # 62 classes: 0-9 (Sample001-010), A-Z (Sample011-036), a-z (Sample037-062)
+#
+# Windows filesystems are case-insensitive: folder 'a' == folder 'A'.
+# To avoid collisions, lowercase letters are stored in folders named with a
+# trailing underscore: 'a' → 'a_', 'b' → 'b_', …, 'z' → 'z_'.
+# The trailing underscore is stripped back to the real character at decode time
+# (see src/classification/predict.py → predict_chars).
 _DIGITS    = [str(d) for d in range(10)]                    # '0'..'9'
 _UPPERCASE = [chr(c) for c in range(ord('A'), ord('Z') + 1)]  # 'A'..'Z'
 _LOWERCASE = [chr(c) for c in range(ord('a'), ord('z') + 1)]  # 'a'..'z'
-CLASS_LABELS: dict[str, str] = {}  # "Sample001" → "0", etc.
-for _i, _label in enumerate(_DIGITS + _UPPERCASE + _LOWERCASE, start=1):
-    CLASS_LABELS[f"Sample{_i:03d}"] = _label
+
+CLASS_LABELS: dict[str, str] = {}  # "Sample001" → folder name
+for _i, _char in enumerate(_DIGITS + _UPPERCASE + _LOWERCASE, start=1):
+    # Lowercase letters get a trailing underscore to be Windows-safe
+    folder = (_char + "_") if _char.islower() else _char
+    CLASS_LABELS[f"Sample{_i:03d}"] = folder
+
+# Reverse mapping: folder name → actual character (used for reference / tests)
+FOLDER_TO_CHAR: dict[str, str] = {
+    folder: folder.rstrip("_") for folder in CLASS_LABELS.values()
+}
 
 
 def _parse_args() -> argparse.Namespace:

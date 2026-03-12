@@ -16,6 +16,14 @@ pip-wheel-metadata/
 share/python-wheels/
 *.whl
 
+# ── Data ─────────────────────────────────────────────────────────────
+*.img
+*.png
+*.jpg
+*.jpeg
+*.bmp
+
+
 # ── Virtual environments ───────────────────────────────────────────────────────
 .venv/
 venv/

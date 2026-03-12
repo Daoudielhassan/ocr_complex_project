@@ -1,98 +1,164 @@
 #!/usr/bin/env python3
-"""Prepare the labelled character dataset from raw document images.
+"""Convert the Chars74K-Digital-English-Font dataset into the ImageFolder layout
+expected by TrainingPipeline.
 
-For each image in ``data/raw/`` this script runs the full preprocessing and
-segmentation stack, saves isolated character crops to ``data/dataset/<split>/``
-and appends entries to ``data/annotations/labels.csv``.
+Chars74K-Digital source layout
+-------------------------------
+    <chars74k_root>/
+        English/
+            Fnt/
+                Sample001/   ← class "0"
+                    img001-001.png
+                    …
+                Sample002/   ← class "1"
+                …
+                Sample062/   ← class "z"
 
-Usage::
+Class mapping (62 classes)
+--------------------------
+    Sample001 – Sample010  →  '0' – '9'
+    Sample011 – Sample036  →  'A' – 'Z'
+    Sample037 – Sample062  →  'a' – 'z'
 
-    python scripts/prepare_dataset.py [--raw-dir PATH] [--out-dir PATH]
+Output ImageFolder layout
+--------------------------
+    <out_dir>/
+        train/<label>/<img>.png
+        val/<label>/<img>.png
+        test/<label>/<img>.png
+
+Usage
+-----
+    python scripts/prepare_dataset.py \\
+        --chars74k-dir path/to/English/Fnt \\
+        --out-dir data/dataset \\
+        [--val-ratio 0.15] [--test-ratio 0.15] [--seed 42]
 """
 from __future__ import annotations
 
 import argparse
+import random
+import shutil
 import sys
 from pathlib import Path
 
-# Ensure the project root is on sys.path when run as a script
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.utils.logger import get_logger
 from src.utils.paths import PATHS
-from src.utils.io import save_image
 
 log = get_logger("prepare_dataset")
 
+# ── Chars74K class mapping ────────────────────────────────────────────────────
+# 62 classes: 0-9 (Sample001-010), A-Z (Sample011-036), a-z (Sample037-062)
+_DIGITS    = [str(d) for d in range(10)]                    # '0'..'9'
+_UPPERCASE = [chr(c) for c in range(ord('A'), ord('Z') + 1)]  # 'A'..'Z'
+_LOWERCASE = [chr(c) for c in range(ord('a'), ord('z') + 1)]  # 'a'..'z'
+CLASS_LABELS: dict[str, str] = {}  # "Sample001" → "0", etc.
+for _i, _label in enumerate(_DIGITS + _UPPERCASE + _LOWERCASE, start=1):
+    CLASS_LABELS[f"Sample{_i:03d}"] = _label
+
 
 def _parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Prepare character dataset from raw documents.")
-    p.add_argument("--raw-dir", type=Path, default=None, help="Raw document directory.")
-    p.add_argument("--out-dir", type=Path, default=None, help="Dataset output root.")
-    p.add_argument("--split", default="train", choices=["train", "val", "test"],
-                   help="Which split to write to (default: train).")
+    p = argparse.ArgumentParser(
+        description="Convert Chars74K-Digital-English-Font to ImageFolder layout."
+    )
+    p.add_argument(
+        "--chars74k-dir", type=Path, default=None,
+        help="Path to the English/Fnt/ directory of the Chars74K dataset "
+             "(default: data/raw/English/Fnt).",
+    )
+    p.add_argument(
+        "--out-dir", type=Path, default=None,
+        help="Output root for the ImageFolder dataset (default: data/dataset).",
+    )
+    p.add_argument("--val-ratio",  type=float, default=0.15, help="Fraction for validation split.")
+    p.add_argument("--test-ratio", type=float, default=0.15, help="Fraction for test split.")
+    p.add_argument("--seed",       type=int,   default=42,   help="Random seed for shuffling.")
     return p.parse_args()
+
+
+def _split_files(
+    files: list[Path],
+    val_ratio: float,
+    test_ratio: float,
+    seed: int,
+) -> tuple[list[Path], list[Path], list[Path]]:
+    """Shuffle and split a file list into (train, val, test)."""
+    rng = random.Random(seed)
+    files = files[:]
+    rng.shuffle(files)
+    n = len(files)
+    n_test = max(1, int(n * test_ratio))
+    n_val  = max(1, int(n * val_ratio))
+    test  = files[:n_test]
+    val   = files[n_test : n_test + n_val]
+    train = files[n_test + n_val :]
+    return train, val, test
 
 
 def main() -> int:
     args = _parse_args()
-    raw_dir = args.raw_dir or PATHS.raw
+
+    fnt_dir = args.chars74k_dir or (PATHS.raw / "English" / "Fnt")
     out_root = args.out_dir or PATHS.dataset
 
-    from src.preprocessing.image_loader import load_document
-    from src.preprocessing.binarization import binarize
-    from src.preprocessing.denoising import denoise
-    from src.preprocessing.deskewing import deskew
-    from src.preprocessing.normalization import normalize
-    from src.segmentation.layout_analyzer import analyze_layout
-    from src.segmentation.line_segmenter import segment_lines
-    from src.segmentation.word_segmenter import segment_words
-    from src.segmentation.char_segmenter import segment_chars
+    if not fnt_dir.exists():
+        log.error(
+            "Chars74K Fnt directory not found: %s\n"
+            "Download the dataset from http://www.ee.surrey.ac.uk/CVSSP/demos/chars74k/ "
+            "and extract it so that English/Fnt/ exists, then re-run this script.",
+            fnt_dir,
+        )
+        return 1
 
-    image_files = list(raw_dir.glob("*.png")) + list(raw_dir.glob("*.jpg"))
-    if not image_files:
-        log.warning("No images found in %s", raw_dir)
-        return 0
+    sample_dirs = sorted(fnt_dir.glob("Sample*"))
+    if not sample_dirs:
+        log.error("No Sample* directories found inside %s", fnt_dir)
+        return 1
 
-    log.info("Processing %d images from %s", len(image_files), raw_dir)
-    char_count = 0
+    log.info("Found %d class directories in %s", len(sample_dirs), fnt_dir)
 
-    for img_path in sorted(image_files):
-        log.info("Processing %s", img_path.name)
-        try:
-            img = load_document(img_path)
-            img = denoise(img, method="median")
-            img = deskew(img)
-            img = binarize(img, method="otsu")
-            img = normalize(img, target_height=1024)
-        except Exception as exc:
-            log.error("Failed to preprocess %s: %s", img_path, exc)
+    total_copied = 0
+    split_counts: dict[str, int] = {"train": 0, "val": 0, "test": 0}
+
+    for sample_dir in sample_dirs:
+        folder_name = sample_dir.name  # e.g. "Sample011"
+        label = CLASS_LABELS.get(folder_name)
+        if label is None:
+            log.warning("Unknown folder %s — skipping.", folder_name)
             continue
 
-        blocks = analyze_layout(img)
-        if not blocks:
-            h, w = img.shape
-            blocks = [(0, 0, w, h)]
+        images = sorted(
+            p for p in sample_dir.iterdir()
+            if p.suffix.lower() in {".png", ".jpg", ".bmp", ".tif", ".tiff"}
+        )
+        if not images:
+            log.warning("%s contains no images — skipping.", folder_name)
+            continue
 
-        for bx, by, bw, bh in blocks:
-            block_img = img[by : by + bh, bx : bx + bw]
-            line_imgs, _ = segment_lines(block_img)
-            for line_img in line_imgs:
-                word_imgs, _ = segment_words(line_img)
-                for word_img in word_imgs:
-                    char_imgs, _ = segment_chars(word_img)
-                    for ci, char_img in enumerate(char_imgs):
-                        # Without a ground-truth label we use the document stem
-                        # as a placeholder label directory.  Replace with actual
-                        # labels sourced from data/annotations/labels.csv.
-                        label = img_path.stem
-                        out_dir = out_root / args.split / label
-                        out_dir.mkdir(parents=True, exist_ok=True)
-                        out_path = out_dir / f"{img_path.stem}_{char_count:06d}.png"
-                        save_image(char_img, out_path)
-                        char_count += 1
+        train_f, val_f, test_f = _split_files(
+            images, args.val_ratio, args.test_ratio, args.seed
+        )
 
-    log.info("Dataset preparation complete. %d character crops saved.", char_count)
+        for split_name, file_list in (("train", train_f), ("val", val_f), ("test", test_f)):
+            dest_dir = out_root / split_name / label
+            dest_dir.mkdir(parents=True, exist_ok=True)
+            for src in file_list:
+                shutil.copy2(src, dest_dir / src.name)
+                split_counts[split_name] += 1
+                total_copied += 1
+
+        log.debug(
+            "%-12s label=%-3s  train=%d  val=%d  test=%d",
+            folder_name, label, len(train_f), len(val_f), len(test_f),
+        )
+
+    log.info(
+        "Done. Copied %d images total  |  train=%d  val=%d  test=%d",
+        total_copied, split_counts["train"], split_counts["val"], split_counts["test"],
+    )
+    log.info("Dataset written to %s", out_root)
     return 0
 
 

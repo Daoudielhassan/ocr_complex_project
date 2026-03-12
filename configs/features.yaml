@@ -1,0 +1,13 @@
+# ─────────────────────────────────────────────────────────────────
+# Feature extraction (HOG) configuration
+# ─────────────────────────────────────────────────────────────────
+
+features:
+  # Target size (height, width) to resize each character before HOG
+  resize_to: [32, 32]
+
+  # HOG parameters
+  orientations: 9           # number of gradient orientation bins
+  pixels_per_cell: [8, 8]   # size of each HOG cell (pixels)
+  cells_per_block: [2, 2]   # cells grouped into one normalisation block
+  block_norm: L2-Hys        # block normalisation: L1 | L1-sqrt | L2 | L2-Hys

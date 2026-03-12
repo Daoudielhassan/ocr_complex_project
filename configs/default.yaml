@@ -1,0 +1,31 @@
+# ─────────────────────────────────────────────────────────────────
+# Global default configuration – overridden by sub-system YAMLs
+# and by CLI arguments at runtime.
+# ─────────────────────────────────────────────────────────────────
+
+# Reproducibility seed (passed to numpy / sklearn)
+seed: 42
+
+# Logging level: DEBUG | INFO | WARNING | ERROR
+log_level: INFO
+
+# Default execution mode: train | infer | evaluate
+mode: infer
+
+# ── Relative paths (from project root) ─────────────────────────
+paths:
+  raw:         data/raw
+  interim:     data/interim
+  processed:   data/interim/processed
+  lines:       data/interim/lines
+  words:       data/interim/words
+  chars:       data/interim/chars
+  dataset:     data/dataset
+  annotations: data/annotations
+  models:      models
+  artifacts:   artifacts
+  figures:     artifacts/figures
+  predictions: artifacts/predictions
+  reports:     artifacts/reports
+  exports:     artifacts/exports
+  runs:        runs

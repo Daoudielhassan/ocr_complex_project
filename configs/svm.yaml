@@ -1,0 +1,24 @@
+# ─────────────────────────────────────────────────────────────────
+# SVM classifier configuration
+# ─────────────────────────────────────────────────────────────────
+
+svm:
+  # SVM kernel: rbf | linear | poly | sigmoid
+  kernel: rbf
+
+  # Regularisation parameter C
+  C: 1.0
+
+  # Kernel coefficient: scale | auto | <float>
+  gamma: scale
+
+  # Stratified cross-validation folds used during training
+  cv_folds: 5
+
+  # Set to true to run GridSearchCV over param_grid below
+  grid_search: false
+
+  param_grid:
+    C: [0.1, 1.0, 10.0]
+    gamma: [scale, auto]
+    kernel: [rbf, linear]

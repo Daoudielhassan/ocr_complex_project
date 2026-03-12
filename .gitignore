@@ -1,0 +1,69 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.installed.cfg
+MANIFEST
+pip-wheel-metadata/
+share/python-wheels/
+*.whl
+
+# ── Virtual environments ───────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+.env
+
+# ── IDE / editors ──────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Jupyter ────────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ── Project artefacts (generated, not source-controlled) ─────────────────────
+artifacts/
+runs/
+models/*.pkl
+models/metadata.json
+
+# ── Interim / processed data (reproducible from raw) ─────────────────────────
+data/interim/
+data/raw/
+# Keep annotation templates but not generated ones
+data/annotations/labels.csv
+data/annotations/ground_truth.json
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── OS / temp ─────────────────────────────────────────────────────────────────
+*.tmp
+*.bak
+*.orig
+~$*
+
+# ── Test coverage ─────────────────────────────────────────────────────────────
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

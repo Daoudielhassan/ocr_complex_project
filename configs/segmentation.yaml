@@ -1,0 +1,23 @@
+# ─────────────────────────────────────────────────────────────────
+# Segmentation configuration
+# ─────────────────────────────────────────────────────────────────
+
+segmentation:
+  # Layout analysis (block detection)
+  min_block_area: 500          # minimum pixel area to keep a text block
+
+  # Line segmentation (horizontal projection)
+  min_line_height: 5           # minimum row-run height (pixels)
+  line_gap_threshold: 3        # merge line runs separated by ≤ this many blank rows
+
+  # Word segmentation (vertical projection)
+  min_word_width: 3            # minimum column-run width (pixels)
+  word_gap_threshold: 5        # blank columns wider than this split words
+
+  # Character segmentation (contour-based)
+  min_char_area: 5             # minimum contour area (pixels)
+  char_min_aspect: 0.05        # minimum w/h ratio
+  char_max_aspect: 10.0        # maximum w/h ratio
+
+  # Region filter (applies at every level)
+  max_region_area: null        # null = no upper limit

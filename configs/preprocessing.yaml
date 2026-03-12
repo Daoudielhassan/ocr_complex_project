@@ -1,0 +1,27 @@
+# ─────────────────────────────────────────────────────────────────
+# Preprocessing configuration
+# ─────────────────────────────────────────────────────────────────
+
+preprocessing:
+  # Binarization method: otsu | sauvola | adaptive
+  binarize_method: otsu
+
+  # Sauvola-specific parameters (used only when method = sauvola)
+  sauvola_window_size: 25
+  sauvola_k: 0.2
+
+  # Adaptive-threshold parameters (used only when method = adaptive)
+  adaptive_block_size: 11
+  adaptive_C: 2
+
+  # Denoising method: median | gaussian | bilateral | nlmeans
+  denoise_method: median
+  denoise_ksize: 3
+
+  # Deskewing
+  deskew: true
+  deskew_max_angle: 15.0   # maximum searchable skew angle (degrees)
+
+  # Normalisation
+  target_height: 1024      # rescale document so height == this many pixels
+  padding: 0               # zero-padding (pixels) added on every side

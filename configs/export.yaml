@@ -1,0 +1,26 @@
+# ─────────────────────────────────────────────────────────────────
+# Export configuration
+# ─────────────────────────────────────────────────────────────────
+
+export:
+  # Default output format: json | csv | markdown | xlsx
+  format: json
+
+  # Output file encoding
+  encoding: utf-8
+
+  # Pretty-print JSON output
+  pretty: true
+
+  # JSON result structure fields to include
+  json_fields:
+    - text
+    - source
+    - blocks
+    - processing_time_s
+
+  # File naming: use source document stem + this suffix
+  file_suffix: _ocr
+
+  # Directory for exports (relative to project root)
+  output_dir: artifacts/exports
